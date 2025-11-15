@@ -1,68 +1,92 @@
+import { LEVELS } from './LevelConfig.js'
+
 export default class GameScene extends Phaser.Scene {
   constructor() {
     super({ key: 'GameScene' })
+  }
+  
+  init(data) {
+    // 接收关卡数据，默认第1关
+    this.currentLevel = data.level || 1
+    const levelConfig = LEVELS[this.currentLevel]
     
     // 游戏状态
-    this.gameState = 'playing' // 'playing', 'won', 'lost'
-    this.currentTurn = 'police' // 'police' or 'thief'
+    this.gameState = 'playing'
+    this.currentTurn = 'police'
     
-    // 图结构定义 - 简单的连通图，适合一年级学生
-    this.graph = {
-      nodes: [
-        { id: 0, x: 150, y: 100, type: 'normal' },
-        { id: 1, x: 300, y: 100, type: 'normal' },
-        { id: 2, x: 450, y: 100, type: 'normal' },
-        { id: 3, x: 600, y: 100, type: 'normal' },
-        { id: 4, x: 750, y: 100, type: 'exit' }, // 出口
-        
-        { id: 5, x: 150, y: 250, type: 'normal' },
-        { id: 6, x: 300, y: 250, type: 'normal' },
-        { id: 7, x: 450, y: 250, type: 'normal' },
-        { id: 8, x: 600, y: 250, type: 'normal' },
-        { id: 9, x: 750, y: 250, type: 'normal' },
-        
-        { id: 10, x: 150, y: 400, type: 'normal' },
-        { id: 11, x: 300, y: 400, type: 'normal' },
-        { id: 12, x: 450, y: 400, type: 'normal' },
-        { id: 13, x: 600, y: 400, type: 'normal' },
-        { id: 14, x: 750, y: 400, type: 'normal' },
-        
-        { id: 15, x: 150, y: 550, type: 'normal' },
-        { id: 16, x: 300, y: 550, type: 'normal' },
-        { id: 17, x: 450, y: 550, type: 'normal' },
-        { id: 18, x: 600, y: 550, type: 'normal' },
-        { id: 19, x: 750, y: 550, type: 'normal' }
-      ],
-      edges: [
-        // 第一行
-        [0, 1], [1, 2], [2, 3], [3, 4],
-        // 第二行
-        [5, 6], [6, 7], [7, 8], [8, 9],
-        // 第三行
-        [10, 11], [11, 12], [12, 13], [13, 14],
-        // 第四行
-        [15, 16], [16, 17], [17, 18], [18, 19],
-        // 垂直连接
-        [0, 5], [1, 6], [2, 7], [3, 8], [4, 9],
-        [5, 10], [6, 11], [7, 12], [8, 13], [9, 14],
-        [10, 15], [11, 16], [12, 17], [13, 18], [14, 19],
-        // 对角线连接（增加复杂度但不太多）
-        [1, 7], [2, 6], [3, 7], [7, 13], [8, 12],
-        [11, 17], [12, 16], [13, 17]
-      ]
-    }
+    // 从关卡配置加载地图
+    this.graph = levelConfig.graph
+    this.thiefPosition = levelConfig.thiefPosition
+    this.policeCount = levelConfig.policeCount
+    this.policePositions = [...levelConfig.policePositions] // 复制数组，避免修改原配置
+    this.levelName = levelConfig.name
     
-    // 角色位置
-    this.thiefPosition = 10 // 小偷起始位置（左下区域）
-    
-    // 动态计算需要的警察数量和位置
-    this.calculateRequiredPolice()
+    // 验证位置是否有重叠
+    this.validatePositions()
     
     // 选中的警察
     this.selectedPolice = null
     
     // 高亮的节点列表
     this.highlightedNodes = []
+  }
+  
+  validatePositions() {
+    // 检查警察位置是否与小偷重叠
+    const conflicts = []
+    
+    this.policePositions.forEach((policePos, index) => {
+      if (policePos === this.thiefPosition) {
+        conflicts.push(`警察${index + 1}与小偷位置重叠 (节点 ${policePos})`)
+      }
+    })
+    
+    // 检查警察之间是否有重叠
+    for (let i = 0; i < this.policePositions.length; i++) {
+      for (let j = i + 1; j < this.policePositions.length; j++) {
+        if (this.policePositions[i] === this.policePositions[j]) {
+          conflicts.push(`警察${i + 1}和警察${j + 1}位置重叠 (节点 ${this.policePositions[i]})`)
+        }
+      }
+    }
+    
+    // 如果有冲突，输出警告并自动修复
+    if (conflicts.length > 0) {
+      console.error(`⚠️ 关卡${this.currentLevel}配置错误:`)
+      conflicts.forEach(conflict => console.error(`  - ${conflict}`))
+      console.log('🔧 正在自动修复位置冲突...')
+      
+      this.autoFixPositions()
+    } else {
+      console.log(`✅ 关卡${this.currentLevel}位置验证通过`)
+    }
+  }
+  
+  autoFixPositions() {
+    // 获取所有可用的节点（排除出口）
+    const availableNodes = this.graph.nodes
+      .filter(node => node.type !== 'exit')
+      .map(node => node.id)
+    
+    // 已占用的位置
+    const occupiedPositions = new Set([this.thiefPosition])
+    
+    // 修复警察位置
+    for (let i = 0; i < this.policePositions.length; i++) {
+      if (occupiedPositions.has(this.policePositions[i])) {
+        // 找到一个未被占用的位置
+        const newPosition = availableNodes.find(nodeId => !occupiedPositions.has(nodeId))
+        if (newPosition !== undefined) {
+          console.log(`  修复: 警察${i + 1} 从节点${this.policePositions[i]} → 节点${newPosition}`)
+          this.policePositions[i] = newPosition
+        } else {
+          console.error(`  ❌ 无法为警察${i + 1}找到可用位置！`)
+        }
+      }
+      occupiedPositions.add(this.policePositions[i])
+    }
+    
+    console.log('✅ 位置修复完成')
   }
   
   preload() {
@@ -93,18 +117,8 @@ export default class GameScene extends Phaser.Scene {
   }
   
   create() {
-    // 重置游戏状态（重新开始时需要）
-    this.gameState = 'playing'
-    this.currentTurn = 'police'
-    this.selectedPolice = null
-    this.highlightedNodes = []
-    
-    // 重置角色位置
-    this.thiefPosition = 10 // 小偷起始位置（左下区域）
-    this.calculateRequiredPolice() // 重新计算警察位置
-    
-    // 绘制标题
-    this.add.text(450, 30, '警察抓小偷', {
+    // 绘制标题（显示关卡名称）
+    this.add.text(450, 30, this.levelName, {
       fontSize: '32px',
       fontFamily: 'Arial',
       color: '#ffffff',
@@ -258,26 +272,50 @@ export default class GameScene extends Phaser.Scene {
   }
   
   createRestartButton() {
-    const button = this.add.rectangle(800, 650, 120, 40, 0x4caf50)
+    // 返回菜单按钮
+    const menuButton = this.add.rectangle(750, 650, 100, 40, 0x2196f3)
       .setInteractive({ useHandCursor: true })
     
-    const buttonText = this.add.text(800, 650, '重新开始', {
+    const menuText = this.add.text(750, 650, '菜单', {
       fontSize: '18px',
       fontFamily: 'Arial',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5)
     
-    button.on('pointerdown', () => {
+    menuButton.on('pointerdown', () => {
+      this.scene.start('MenuScene')
+    })
+    
+    menuButton.on('pointerover', () => {
+      menuButton.setFillStyle(0x1976d2)
+    })
+    
+    menuButton.on('pointerout', () => {
+      menuButton.setFillStyle(0x2196f3)
+    })
+    
+    // 重新开始按钮
+    const restartButton = this.add.rectangle(850, 650, 100, 40, 0x4caf50)
+      .setInteractive({ useHandCursor: true })
+    
+    const restartText = this.add.text(850, 650, '重来', {
+      fontSize: '18px',
+      fontFamily: 'Arial',
+      color: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5)
+    
+    restartButton.on('pointerdown', () => {
       this.scene.restart()
     })
     
-    button.on('pointerover', () => {
-      button.setFillStyle(0x45a049)
+    restartButton.on('pointerover', () => {
+      restartButton.setFillStyle(0x45a049)
     })
     
-    button.on('pointerout', () => {
-      button.setFillStyle(0x4caf50)
+    restartButton.on('pointerout', () => {
+      restartButton.setFillStyle(0x4caf50)
     })
   }
   
@@ -419,6 +457,12 @@ export default class GameScene extends Phaser.Scene {
     // 找到出口节点
     const exitNode = this.graph.nodes.find(n => n.type === 'exit')
     
+    // 特殊判断：如果可以直接到达出口，立即选择！
+    if (possibleMoves.includes(exitNode.id)) {
+      console.log('🎯 小偷发现出口就在旁边，直接逃跑！')
+      return exitNode.id
+    }
+    
     // 为每个可能的移动计算评分
     let bestMove = possibleMoves[0]
     let bestScore = -Infinity
@@ -524,11 +568,19 @@ export default class GameScene extends Phaser.Scene {
     if (result === 'won') {
       // 小偷逃脱 - 警察失败
       this.showMessage('😔 行动失败！小偷逃走了...', 0xff9800, true)
+      // 3秒后重新开始本关
+      this.time.delayedCall(3000, () => {
+        this.scene.restart()
+      })
     } else {
       // 警察抓住小偷 - 播放爆炸效果
       this.createExplosionEffect()
       this.time.delayedCall(500, () => {
         this.showMessage('🎉 成功抓捕！小偷已落网！', 0x4caf50, true)
+      })
+      // 2秒后跳转到胜利场景
+      this.time.delayedCall(2500, () => {
+        this.scene.start('VictoryScene', { level: this.currentLevel })
       })
     }
   }
@@ -633,7 +685,7 @@ export default class GameScene extends Phaser.Scene {
       backgroundColor: Phaser.Display.Color.IntegerToColor(color).rgba,
       padding: { x: 20, y: 10 },
       fontStyle: 'bold'
-    }).setOrigin(0.5)
+    }).setOrigin(0.5).setDepth(200) // 设置在最高层，确保不被遮挡
     
     if (!isGameOver) {
       this.time.delayedCall(2000, () => {
