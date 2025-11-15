@@ -96,12 +96,12 @@ export default class GameScene extends Phaser.Scene {
   }
   
   // 动态计算图片缩放比例
-  calculateSpriteScale(textureKey, targetSize = 45) {
-    // targetSize: 目标显示大小（像素），默认45px，略小于节点50px
+  calculateSpriteScale(textureKey, targetSize = 90) {
+    // targetSize: 目标显示大小（像素），默认90px，占满整个节点（直径=半径45*2）
     const texture = this.textures.get(textureKey)
     if (!texture || !texture.source || !texture.source[0]) {
       console.warn(`无法获取纹理 ${textureKey}，使用默认缩放`)
-      return 0.35
+      return 0.5
     }
     
     const width = texture.source[0].width
@@ -150,42 +150,63 @@ export default class GameScene extends Phaser.Scene {
   
   drawEdges() {
     const graphics = this.add.graphics()
-    graphics.lineStyle(3, 0x4a5568, 1)
+    // 更粗、更可爱的连线，使用虚线效果
+    graphics.lineStyle(6, 0x90caf9, 0.6) // 浅蓝色，半透明
     
     this.graph.edges.forEach(([from, to]) => {
       const fromNode = this.graph.nodes[from]
       const toNode = this.graph.nodes[to]
+      
+      // 绘制带阴影效果的连线
       graphics.lineBetween(fromNode.x, fromNode.y, toNode.x, toNode.y)
     })
   }
   
   drawNode(node) {
     const graphics = this.add.graphics()
+    const nodeRadius = 45 // 进一步增大节点半径到45
+    
+    // 绘制阴影效果（可爱的立体感）
+    graphics.fillStyle(0x000000, 0.2)
+    graphics.fillCircle(node.x + 3, node.y + 3, nodeRadius)
     
     // 根据节点类型选择颜色
     if (node.type === 'exit') {
-      graphics.fillStyle(0x4caf50, 1) // 绿色表示出口
-      graphics.lineStyle(4, 0x2e7d32, 1)
+      // 出口节点 - 绿色渐变效果
+      graphics.fillStyle(0x66bb6a, 1)
+      graphics.lineStyle(5, 0xffffff, 1) // 白色边框
+      graphics.fillCircle(node.x, node.y, nodeRadius)
+      graphics.strokeCircle(node.x, node.y, nodeRadius)
+      
+      // 内圈装饰
+      graphics.lineStyle(3, 0x4caf50, 1)
+      graphics.strokeCircle(node.x, node.y, nodeRadius - 8)
     } else {
-      graphics.fillStyle(0x64b5f6, 1) // 蓝色表示普通节点
-      graphics.lineStyle(3, 0x1976d2, 1)
+      // 普通节点 - 蓝色渐变效果
+      graphics.fillStyle(0x64b5f6, 1)
+      graphics.lineStyle(5, 0xffffff, 1) // 白色边框
+      graphics.fillCircle(node.x, node.y, nodeRadius)
+      graphics.strokeCircle(node.x, node.y, nodeRadius)
+      
+      // 内圈装饰
+      graphics.lineStyle(2, 0x42a5f5, 1)
+      graphics.strokeCircle(node.x, node.y, nodeRadius - 8)
     }
-    
-    graphics.fillCircle(node.x, node.y, 25)
-    graphics.strokeCircle(node.x, node.y, 25)
     
     // 如果是出口，添加标签
     if (node.type === 'exit') {
       this.add.text(node.x, node.y, '出口', {
-        fontSize: '14px',
+        fontSize: '18px',
         fontFamily: 'Arial',
         color: '#ffffff',
-        fontStyle: 'bold'
-      }).setOrigin(0.5)
+        fontStyle: 'bold',
+        stroke: '#2e7d32',
+        strokeThickness: 3
+      }).setOrigin(0.5).setDepth(5)
     }
     
     // 添加交互 - 使用更大的点击区域
-    const hitZone = this.add.circle(node.x, node.y, 30, 0xffffff, 0)
+    const hitZone = this.add.circle(node.x, node.y, nodeRadius + 5, 0xffffff, 0)
     hitZone.setInteractive({ useHandCursor: true })
     hitZone.setDepth(100) // 设置在最高层，确保可以点击
     
@@ -198,15 +219,19 @@ export default class GameScene extends Phaser.Scene {
         if (isHighlighted) {
           // 如果是高亮节点，增强悬停效果
           graphics.clear()
+          // 阴影
+          graphics.fillStyle(0x000000, 0.2)
+          graphics.fillCircle(node.x + 3, node.y + 3, nodeRadius)
+          
           if (node.type === 'exit') {
             graphics.fillStyle(0x81c784, 1) // 更亮的绿色
-            graphics.lineStyle(6, 0xffd54f, 1) // 更粗的黄色边框
+            graphics.lineStyle(6, 0xffd54f, 1) // 黄色边框
           } else {
             graphics.fillStyle(0xbbdefb, 1) // 更亮的蓝色
-            graphics.lineStyle(6, 0xffd54f, 1) // 更粗的黄色边框
+            graphics.lineStyle(6, 0xffd54f, 1) // 黄色边框
           }
-          graphics.fillCircle(node.x, node.y, 25)
-          graphics.strokeCircle(node.x, node.y, 25)
+          graphics.fillCircle(node.x, node.y, nodeRadius)
+          graphics.strokeCircle(node.x, node.y, nodeRadius)
         }
       }
     })
@@ -215,36 +240,50 @@ export default class GameScene extends Phaser.Scene {
       const isHighlighted = this.highlightedNodes && this.highlightedNodes.includes(node.id)
       graphics.clear()
       
+      // 阴影
+      graphics.fillStyle(0x000000, 0.2)
+      graphics.fillCircle(node.x + 3, node.y + 3, nodeRadius)
+      
       if (isHighlighted) {
         // 恢复为高亮状态
         if (node.type === 'exit') {
           graphics.fillStyle(0x66bb6a, 1)
-          graphics.lineStyle(5, 0xffeb3b, 1)
+          graphics.lineStyle(6, 0xffeb3b, 1)
         } else {
           graphics.fillStyle(0x90caf9, 1)
-          graphics.lineStyle(5, 0xffeb3b, 1)
+          graphics.lineStyle(6, 0xffeb3b, 1)
         }
       } else {
         // 恢复为普通状态
         if (node.type === 'exit') {
-          graphics.fillStyle(0x4caf50, 1)
-          graphics.lineStyle(4, 0x2e7d32, 1)
+          graphics.fillStyle(0x66bb6a, 1)
+          graphics.lineStyle(5, 0xffffff, 1)
+          graphics.fillCircle(node.x, node.y, nodeRadius)
+          graphics.strokeCircle(node.x, node.y, nodeRadius)
+          graphics.lineStyle(3, 0x4caf50, 1)
+          graphics.strokeCircle(node.x, node.y, nodeRadius - 8)
+          return
         } else {
           graphics.fillStyle(0x64b5f6, 1)
-          graphics.lineStyle(3, 0x1976d2, 1)
+          graphics.lineStyle(5, 0xffffff, 1)
+          graphics.fillCircle(node.x, node.y, nodeRadius)
+          graphics.strokeCircle(node.x, node.y, nodeRadius)
+          graphics.lineStyle(2, 0x42a5f5, 1)
+          graphics.strokeCircle(node.x, node.y, nodeRadius - 8)
+          return
         }
       }
-      graphics.fillCircle(node.x, node.y, 25)
-      graphics.strokeCircle(node.x, node.y, 25)
+      graphics.fillCircle(node.x, node.y, nodeRadius)
+      graphics.strokeCircle(node.x, node.y, nodeRadius)
     })
     
     this.nodeGraphics.push({ node, graphics, hitZone })
   }
   
   createCharacters() {
-    // 动态计算缩放比例
-    const thiefScale = this.calculateSpriteScale('thief', 45)
-    const policeScale = this.calculateSpriteScale('police', 45)
+    // 动态计算缩放比例 - 使用90px让角色占满节点（节点半径45，直径90）
+    const thiefScale = this.calculateSpriteScale('thief', 90)
+    const policeScale = this.calculateSpriteScale('police', 90)
     
     // 保存原始缩放值，用于恢复
     this.policeOriginalScale = policeScale
@@ -707,6 +746,8 @@ export default class GameScene extends Phaser.Scene {
     const validMoves = this.getAdjacentNodes(policePosition)
       .filter(nodeId => !this.isNodeOccupied(nodeId))
     
+    const nodeRadius = 45 // 与 drawNode 保持一致
+    
     // 高亮这些节点
     validMoves.forEach(nodeId => {
       const nodeGraphic = this.nodeGraphics.find(ng => ng.node.id === nodeId)
@@ -715,15 +756,19 @@ export default class GameScene extends Phaser.Scene {
         
         // 重绘节点为高亮颜色
         graphics.clear()
+        // 阴影
+        graphics.fillStyle(0x000000, 0.2)
+        graphics.fillCircle(node.x + 3, node.y + 3, nodeRadius)
+        
         if (node.type === 'exit') {
           graphics.fillStyle(0x66bb6a, 1) // 浅绿色
-          graphics.lineStyle(5, 0xffeb3b, 1) // 黄色边框
+          graphics.lineStyle(6, 0xffeb3b, 1) // 黄色边框
         } else {
           graphics.fillStyle(0x90caf9, 1) // 浅蓝色
-          graphics.lineStyle(5, 0xffeb3b, 1) // 黄色边框
+          graphics.lineStyle(6, 0xffeb3b, 1) // 黄色边框
         }
-        graphics.fillCircle(node.x, node.y, 25)
-        graphics.strokeCircle(node.x, node.y, 25)
+        graphics.fillCircle(node.x, node.y, nodeRadius)
+        graphics.strokeCircle(node.x, node.y, nodeRadius)
         
         // 添加到高亮列表
         if (!this.highlightedNodes) {
@@ -737,6 +782,8 @@ export default class GameScene extends Phaser.Scene {
   clearHighlightedNodes() {
     if (!this.highlightedNodes) return
     
+    const nodeRadius = 45 // 与 drawNode 保持一致
+    
     // 恢复所有高亮节点的原始样式
     this.highlightedNodes.forEach(nodeId => {
       const nodeGraphic = this.nodeGraphics.find(ng => ng.node.id === nodeId)
@@ -745,15 +792,25 @@ export default class GameScene extends Phaser.Scene {
         
         // 重绘为原始颜色
         graphics.clear()
+        // 阴影
+        graphics.fillStyle(0x000000, 0.2)
+        graphics.fillCircle(node.x + 3, node.y + 3, nodeRadius)
+        
         if (node.type === 'exit') {
-          graphics.fillStyle(0x4caf50, 1)
-          graphics.lineStyle(4, 0x2e7d32, 1)
+          graphics.fillStyle(0x66bb6a, 1)
+          graphics.lineStyle(5, 0xffffff, 1)
+          graphics.fillCircle(node.x, node.y, nodeRadius)
+          graphics.strokeCircle(node.x, node.y, nodeRadius)
+          graphics.lineStyle(3, 0x4caf50, 1)
+          graphics.strokeCircle(node.x, node.y, nodeRadius - 8)
         } else {
           graphics.fillStyle(0x64b5f6, 1)
-          graphics.lineStyle(3, 0x1976d2, 1)
+          graphics.lineStyle(5, 0xffffff, 1)
+          graphics.fillCircle(node.x, node.y, nodeRadius)
+          graphics.strokeCircle(node.x, node.y, nodeRadius)
+          graphics.lineStyle(2, 0x42a5f5, 1)
+          graphics.strokeCircle(node.x, node.y, nodeRadius - 8)
         }
-        graphics.fillCircle(node.x, node.y, 25)
-        graphics.strokeCircle(node.x, node.y, 25)
       }
     })
     
