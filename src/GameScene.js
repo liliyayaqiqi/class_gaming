@@ -65,9 +65,46 @@ export default class GameScene extends Phaser.Scene {
     this.highlightedNodes = []
   }
   
+  preload() {
+    // 预加载图片资源
+    this.load.image('police', '/police.png')
+    this.load.image('thief', '/thief.png')
+  }
+  
+  // 动态计算图片缩放比例
+  calculateSpriteScale(textureKey, targetSize = 45) {
+    // targetSize: 目标显示大小（像素），默认45px，略小于节点50px
+    const texture = this.textures.get(textureKey)
+    if (!texture || !texture.source || !texture.source[0]) {
+      console.warn(`无法获取纹理 ${textureKey}，使用默认缩放`)
+      return 0.35
+    }
+    
+    const width = texture.source[0].width
+    const height = texture.source[0].height
+    const maxDimension = Math.max(width, height)
+    
+    // 计算缩放比例，使图片最大边等于目标大小
+    const scale = targetSize / maxDimension
+    
+    console.log(`图片 ${textureKey}: ${width}x${height}, 缩放比例: ${scale.toFixed(3)}, 显示大小: ${(maxDimension * scale).toFixed(1)}px`)
+    
+    return scale
+  }
+  
   create() {
+    // 重置游戏状态（重新开始时需要）
+    this.gameState = 'playing'
+    this.currentTurn = 'police'
+    this.selectedPolice = null
+    this.highlightedNodes = []
+    
+    // 重置角色位置
+    this.thiefPosition = 10 // 小偷起始位置（左下区域）
+    this.calculateRequiredPolice() // 重新计算警察位置
+    
     // 绘制标题
-    this.add.text(450, 30, `警察抓小偷 (${this.policeCount}名警察)`, {
+    this.add.text(450, 30, '警察抓小偷', {
       fontSize: '32px',
       fontFamily: 'Arial',
       color: '#ffffff',
@@ -136,7 +173,7 @@ export default class GameScene extends Phaser.Scene {
     // 添加交互 - 使用更大的点击区域
     const hitZone = this.add.circle(node.x, node.y, 30, 0xffffff, 0)
     hitZone.setInteractive({ useHandCursor: true })
-    hitZone.setDepth(-1) // 设置在最底层，不遮挡其他元素
+    hitZone.setDepth(100) // 设置在最高层，确保可以点击
     
     hitZone.on('pointerdown', () => this.onNodeClick(node))
     
@@ -191,35 +228,32 @@ export default class GameScene extends Phaser.Scene {
   }
   
   createCharacters() {
-    // 创建小偷
-    const thiefNode = this.graph.nodes[this.thiefPosition]
-    this.thief = this.add.circle(thiefNode.x, thiefNode.y, 20, 0xff5252)
-    this.thief.setDepth(10) // 设置层级
-    this.thiefText = this.add.text(thiefNode.x, thiefNode.y, '🏃', {
-      fontSize: '24px'
-    }).setOrigin(0.5).setDepth(11)
+    // 动态计算缩放比例
+    const thiefScale = this.calculateSpriteScale('thief', 45)
+    const policeScale = this.calculateSpriteScale('police', 45)
     
-    // 动态创建警察
+    // 保存原始缩放值，用于恢复
+    this.policeOriginalScale = policeScale
+    
+    // 创建小偷（使用图片精灵）
+    const thiefNode = this.graph.nodes[this.thiefPosition]
+    this.thief = this.add.sprite(thiefNode.x, thiefNode.y, 'thief')
+    this.thief.setScale(thiefScale)
+    this.thief.setDepth(10)
+    // 不设置 interactive，让点击事件穿透到下层节点
+    
+    // 动态创建警察（使用图片精灵）
     this.policeObjects = [] // 存储所有警察对象
-    this.policeTexts = [] // 存储所有警察文本
     
     for (let i = 0; i < this.policeCount; i++) {
       const policeNode = this.graph.nodes[this.policePositions[i]]
-      const policeCircle = this.add.circle(policeNode.x, policeNode.y, 20, 0x2196f3)
-      policeCircle.setInteractive({ useHandCursor: true })
-      policeCircle.setDepth(10)
+      const policeSprite = this.add.sprite(policeNode.x, policeNode.y, 'police')
+      policeSprite.setScale(policeScale)
+      policeSprite.setDepth(10)
+      // 不设置 interactive，避免拦截节点点击
+      // 通过点击节点来选择和移动警察
       
-      const policeText = this.add.text(policeNode.x, policeNode.y, '👮', {
-        fontSize: '24px'
-      }).setOrigin(0.5).setDepth(11)
-      
-      const policeIndex = i
-      policeCircle.on('pointerdown', () => this.onPoliceClick(policeIndex))
-      policeText.setInteractive({ useHandCursor: true })
-      policeText.on('pointerdown', () => this.onPoliceClick(policeIndex))
-      
-      this.policeObjects.push(policeCircle)
-      this.policeTexts.push(policeText)
+      this.policeObjects.push(policeSprite)
     }
   }
   
@@ -258,11 +292,15 @@ export default class GameScene extends Phaser.Scene {
     // 选中警察
     this.selectedPolice = policeIndex
     
-    // 清除所有警察的高亮
-    this.policeObjects.forEach(police => police.setStrokeStyle(0))
+    // 清除所有警察的高亮效果
+    this.policeObjects.forEach(police => {
+      police.clearTint()
+      police.setScale(this.policeOriginalScale) // 恢复原始大小
+    })
     
-    // 高亮显示选中的警察
-    this.policeObjects[policeIndex].setStrokeStyle(4, 0xffeb3b)
+    // 高亮显示选中的警察（使用色调和缩放）
+    this.policeObjects[policeIndex].setTint(0xffff00) // 黄色高亮
+    this.policeObjects[policeIndex].setScale(this.policeOriginalScale * 1.2) // 放大20%
     
     // 高亮显示可移动的节点
     this.highlightValidMoves(policeIndex)
@@ -273,8 +311,17 @@ export default class GameScene extends Phaser.Scene {
   onNodeClick(node) {
     if (this.gameState !== 'playing') return
     
-    if (this.currentTurn === 'police' && this.selectedPolice !== null) {
-      this.movePolice(node)
+    if (this.currentTurn === 'police') {
+      // 检查点击的节点是否有警察
+      const policeIndex = this.policePositions.findIndex(pos => pos === node.id)
+      
+      if (policeIndex !== -1) {
+        // 点击了警察所在的节点，选中该警察
+        this.onPoliceClick(policeIndex)
+      } else if (this.selectedPolice !== null) {
+        // 已经选中了警察，尝试移动
+        this.movePolice(node)
+      }
     }
   }
   
@@ -296,7 +343,7 @@ export default class GameScene extends Phaser.Scene {
     // 移动警察
     this.policePositions[this.selectedPolice] = targetNode.id
     this.tweens.add({
-      targets: [this.policeObjects[this.selectedPolice], this.policeTexts[this.selectedPolice]],
+      targets: this.policeObjects[this.selectedPolice],
       x: targetNode.x,
       y: targetNode.y,
       duration: 300,
@@ -304,7 +351,10 @@ export default class GameScene extends Phaser.Scene {
     })
     
     // 取消选中和高亮
-    this.policeObjects.forEach(police => police.setStrokeStyle(0))
+    this.policeObjects.forEach(police => {
+      police.clearTint()
+      police.setScale(this.policeOriginalScale)
+    })
     this.selectedPolice = null
     this.clearHighlightedNodes()
     
@@ -342,7 +392,7 @@ export default class GameScene extends Phaser.Scene {
     // 移动小偷
     this.thiefPosition = bestMove
     this.tweens.add({
-      targets: [this.thief, this.thiefText],
+      targets: this.thief,
       x: targetNode.x,
       y: targetNode.y,
       duration: 400,
@@ -369,36 +419,49 @@ export default class GameScene extends Phaser.Scene {
     // 找到出口节点
     const exitNode = this.graph.nodes.find(n => n.type === 'exit')
     
-    // 计算每个可能移动到出口的距离
+    // 为每个可能的移动计算评分
     let bestMove = possibleMoves[0]
-    let minDistance = this.calculateDistance(possibleMoves[0], exitNode.id)
+    let bestScore = -Infinity
     
     for (const move of possibleMoves) {
       // 计算到出口的距离
       const distanceToExit = this.calculateDistance(move, exitNode.id)
       
-      // 计算到最近警察的距离
-      const distanceToPolice1 = this.calculateDistance(move, this.police1Position)
-      const distanceToPolice2 = this.calculateDistance(move, this.police2Position)
-      const minPoliceDistance = Math.min(distanceToPolice1, distanceToPolice2)
-      
-      // 优先考虑：1. 远离警察 2. 靠近出口
-      // 如果警察很近（距离<=2），优先远离
-      if (minPoliceDistance <= 2) {
-        const currentMinPoliceDistance = Math.min(
-          this.calculateDistance(bestMove, this.police1Position),
-          this.calculateDistance(bestMove, this.police2Position)
+      // 计算到最近警察的距离（遍历所有警察）
+      const minPoliceDistance = Math.min(
+        ...this.policePositions.map(policePos => 
+          this.calculateDistance(move, policePos)
         )
-        if (minPoliceDistance > currentMinPoliceDistance) {
-          bestMove = move
-          minDistance = distanceToExit
-        }
+      )
+      
+      // 综合评分系统：
+      // 1. 基础分：优先靠近出口（距离越小越好）
+      // 2. 安全分：根据警察距离动态调整权重
+      //    - 距离1：非常危险，极高惩罚
+      //    - 距离2：危险，高惩罚
+      //    - 距离3+：安全，小奖励
+      
+      let score = -distanceToExit * 10  // 基础分：靠近出口
+      
+      // 根据警察距离动态调整分数
+      if (minPoliceDistance === 1) {
+        // 距离1：非常危险，几乎不可选（除非没有其他选择）
+        score -= 100
+      } else if (minPoliceDistance === 2) {
+        // 距离2：危险，大幅降低优先级
+        score -= 30
+      } else if (minPoliceDistance === 3) {
+        // 距离3：稍微谨慎
+        score -= 5
       } else {
-        // 否则优先靠近出口
-        if (distanceToExit < minDistance) {
-          bestMove = move
-          minDistance = distanceToExit
-        }
+        // 距离4+：安全，小幅加分
+        score += minPoliceDistance * 2
+      }
+      
+      // 如果这个移动的评分更高，选择它
+      if (score > bestScore) {
+        bestScore = score
+        bestMove = move
       }
     }
     
@@ -459,10 +522,103 @@ export default class GameScene extends Phaser.Scene {
     this.gameState = result
     
     if (result === 'won') {
-      this.showMessage('🎉 小偷逃脱成功！', 0x4caf50, true)
+      // 小偷逃脱 - 警察失败
+      this.showMessage('😔 行动失败！小偷逃走了...', 0xff9800, true)
     } else {
-      this.showMessage('👮 警察抓住了小偷！', 0x2196f3, true)
+      // 警察抓住小偷 - 播放爆炸效果
+      this.createExplosionEffect()
+      this.time.delayedCall(500, () => {
+        this.showMessage('🎉 成功抓捕！小偷已落网！', 0x4caf50, true)
+      })
     }
+  }
+  
+  createExplosionEffect() {
+    // 隐藏小偷
+    this.thief.setVisible(false)
+    
+    const thiefNode = this.graph.nodes[this.thiefPosition]
+    const x = thiefNode.x
+    const y = thiefNode.y
+    
+    // 创建爆炸粒子效果
+    const colors = [0xff5252, 0xff9800, 0xffeb3b, 0xffffff]
+    const particles = []
+    
+    // 创建多个爆炸粒子
+    for (let i = 0; i < 20; i++) {
+      const angle = (Math.PI * 2 * i) / 20
+      const speed = 100 + Math.random() * 100
+      const color = colors[Math.floor(Math.random() * colors.length)]
+      
+      const particle = this.add.circle(x, y, 4 + Math.random() * 4, color)
+      particle.setDepth(20)
+      particles.push(particle)
+      
+      // 粒子向外飞散
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * speed,
+        y: y + Math.sin(angle) * speed,
+        alpha: 0,
+        scale: 0,
+        duration: 500 + Math.random() * 300,
+        ease: 'Power2',
+        onComplete: () => {
+          particle.destroy()
+        }
+      })
+    }
+    
+    // 创建冲击波效果
+    for (let i = 0; i < 3; i++) {
+      const wave = this.add.circle(x, y, 10, 0xff5252, 0.6)
+      wave.setDepth(15)
+      wave.setStrokeStyle(3, 0xff9800)
+      
+      this.tweens.add({
+        targets: wave,
+        scale: 4 + i * 2,
+        alpha: 0,
+        duration: 400 + i * 100,
+        ease: 'Power2',
+        delay: i * 100,
+        onComplete: () => {
+          wave.destroy()
+        }
+      })
+    }
+    
+    // 创建闪光效果
+    const flash = this.add.circle(x, y, 30, 0xffffff, 0.8)
+    flash.setDepth(25)
+    this.tweens.add({
+      targets: flash,
+      scale: 3,
+      alpha: 0,
+      duration: 300,
+      ease: 'Power2',
+      onComplete: () => {
+        flash.destroy()
+      }
+    })
+    
+    // 添加文字效果
+    const boomText = this.add.text(x, y, '💥', {
+      fontSize: '48px'
+    }).setOrigin(0.5).setDepth(30)
+    
+    this.tweens.add({
+      targets: boomText,
+      scale: 2,
+      alpha: 0,
+      y: y - 50,
+      duration: 600,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        boomText.destroy()
+      }
+    })
   }
   
   showMessage(text, color, isGameOver = false) {
