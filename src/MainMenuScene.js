@@ -35,7 +35,7 @@ export default class MainMenuScene extends Phaser.Scene {
     
     // 职业选择按钮
     this.createCareerButton(centerX, 280, '🚔 警察学校', '学习抓捕技巧，成为正义卫士', 0x2196f3, 'PoliceMenuScene')
-    this.createCareerButton(centerX, 380, '🚗 汽车美容师', '打造完美座驾，展现专业技术', 0x4caf50, 'CarBeautyScene')
+    this.createCareerButton(centerX, 380, '🚗 汽车美容师', '打造完美座驾，展现专业技术', 0x4caf50, 'CarMenuScene')
     this.createCareerButton(centerX, 480, '👗 时装造型师', '设计时尚造型，引领潮流风向', 0xe91e63, 'FashionScene')
     this.createCareerButton(centerX, 580, '🧋 奶茶大师', '调制美味饮品，创造甜蜜时光', 0xff9800, 'BubbleTeaScene')
     
@@ -68,7 +68,7 @@ export default class MainMenuScene extends Phaser.Scene {
     }).setOrigin(0.5)
     
     // 判断是否已实现
-    const isImplemented = targetScene === 'PoliceMenuScene'
+    const isImplemented = targetScene === 'PoliceMenuScene' || targetScene === 'CarMenuScene'
     
     if (!isImplemented) {
       // 未实现的职业添加"敬请期待"标签
