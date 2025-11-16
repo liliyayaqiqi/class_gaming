@@ -1,9 +1,13 @@
 import './style.css'
 import Phaser from 'phaser'
-import MenuScene from './MenuScene.js'
+import MainMenuScene from './MainMenuScene.js'
+import PoliceMenuScene from './PoliceMenuScene.js'
 import GameScene from './GameScene.js'
 import VictoryScene from './VictoryScene.js'
 import FinalVictoryScene from './FinalVictoryScene.js'
+import CarBeautyScene from './CarBeautyScene.js'
+import FashionScene from './FashionScene.js'
+import BubbleTeaScene from './BubbleTeaScene.js'
 
 const config = {
   type: Phaser.AUTO,
@@ -11,7 +15,7 @@ const config = {
   height: 700,
   parent: 'game-container',
   backgroundColor: '#2d3561',
-  scene: [MenuScene, GameScene, VictoryScene, FinalVictoryScene],
+  scene: [MainMenuScene, PoliceMenuScene, GameScene, VictoryScene, FinalVictoryScene, CarBeautyScene, FashionScene, BubbleTeaScene],
   physics: {
     default: 'arcade',
     arcade: {

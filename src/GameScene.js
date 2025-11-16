@@ -91,8 +91,8 @@ export default class GameScene extends Phaser.Scene {
   
   preload() {
     // 预加载图片资源
-    this.load.image('police', '/police.png')
-    this.load.image('thief', '/thief.png')
+    this.load.image('police', '/police/police.png')
+    this.load.image('thief', '/police/thief.png')
   }
   
   // 动态计算图片缩放比例
@@ -323,7 +323,7 @@ export default class GameScene extends Phaser.Scene {
     }).setOrigin(0.5)
     
     menuButton.on('pointerdown', () => {
-      this.scene.start('MenuScene')
+      this.scene.start('PoliceMenuScene')
     })
     
     menuButton.on('pointerover', () => {

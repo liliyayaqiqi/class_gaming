@@ -61,7 +61,7 @@ export default class VictoryScene extends Phaser.Scene {
       })
       
       this.createButton(centerX, 460, '返回菜单', 0x2196f3, () => {
-        this.scene.start('MenuScene')
+        this.scene.start('PoliceMenuScene')
       })
     } else {
       // 最后一关，跳转到终极胜利页面

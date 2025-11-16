@@ -79,7 +79,7 @@ export default class FinalVictoryScene extends Phaser.Scene {
     // 按钮
     this.time.delayedCall(3500, () => {
       this.createButton(centerX - 140, 640, '返回菜单', 0x2196f3, () => {
-        this.scene.start('MenuScene')
+        this.scene.start('PoliceMenuScene')
       })
       
       this.createButton(centerX + 140, 640, '再玩一次', 0x4caf50, () => {
