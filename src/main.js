@@ -11,6 +11,9 @@ import CarFinishScene from './CarFinishScene.js'
 import CarBeautyScene from './CarBeautyScene.js'
 import FashionScene from './FashionScene.js'
 import BubbleTeaScene from './BubbleTeaScene.js'
+import MilkTeaMenuScene from './MilkTeaMenuScene.js'
+import MilkTeaGameScene from './MilkTeaGameScene.js'
+import MilkTeaFinishScene from './MilkTeaFinishScene.js'
 
 const config = {
   type: Phaser.AUTO,
@@ -18,7 +21,7 @@ const config = {
   height: 700,
   parent: 'game-container',
   backgroundColor: '#2d3561',
-  scene: [MainMenuScene, PoliceMenuScene, GameScene, VictoryScene, FinalVictoryScene, CarMenuScene, CarBeauticianScene, CarFinishScene, CarBeautyScene, FashionScene, BubbleTeaScene],
+  scene: [MainMenuScene, PoliceMenuScene, GameScene, VictoryScene, FinalVictoryScene, CarMenuScene, CarBeauticianScene, CarFinishScene, CarBeautyScene, FashionScene, BubbleTeaScene, MilkTeaMenuScene, MilkTeaGameScene, MilkTeaFinishScene],
   physics: {
     default: 'arcade',
     arcade: {
