@@ -19,10 +19,6 @@ export default class MilkTeaFinishScene extends Phaser.Scene {
     this.centerX = this.gameWidth / 2
     this.centerY = this.gameHeight / 2
     
-    console.log('=== 游戏尺寸信息 ===')
-    console.log('游戏宽度:', this.gameWidth, '高度:', this.gameHeight)
-    console.log('中心点:', this.centerX, this.centerY)
-    
     // 标题（页面顶部居中 - 使用实际中心点）
     const titleText = this.add.text(this.centerX, 50, '🎉 奶茶做好啦！', {
       fontSize: '44px',
@@ -33,8 +29,6 @@ export default class MilkTeaFinishScene extends Phaser.Scene {
       strokeThickness: 8,
       align: 'center'
     }).setOrigin(0.5, 0.5).setDepth(300)
-    
-    console.log('标题位置:', titleText.x, titleText.y, '标题宽度:', titleText.width)
     
     // 左上角返回主菜单按钮
     this.createBackButton()
@@ -574,13 +568,11 @@ export default class MilkTeaFinishScene extends Phaser.Scene {
     replayButton.on('pointerdown', () => {
       if (this.isCorrect) {
         // 成功：重新生成订单，显示订单页面
-        console.log('成功后再玩一次：传入 keepOrder=false，将生成新订单')
         this.scene.start('MilkTeaGameScene', { 
-          keepOrder: false  // 明确标记不保留订单
+          keepOrder: false
         })
       } else {
         // 失败：保留当前订单，跳过订单页面直接制作
-        console.log('失败后重新制作：传入 keepOrder=true 和原订单')
         this.scene.start('MilkTeaGameScene', { 
           keepOrder: true, 
           customerOrder: this.customerOrder 

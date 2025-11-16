@@ -1,6 +1,57 @@
 export default class MilkTeaGameScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MilkTeaGameScene' })
+    
+    // 游戏配置常量
+    this.CONFIG = {
+      // 颜色配置
+      COLORS: {
+        BACKGROUND: '#F5DEB3',
+        TEA_BASE: {
+          '红茶': 0x8B4513,
+          '绿茶': 0x90EE90,
+          '乌龙茶': 0xDAA520
+        },
+        FRUIT: {
+          '苹果': 0xFF6347,
+          '草莓': 0xFF1493,
+          '葡萄': 0x9370DB
+        },
+        MILK: {
+          '全脂牛奶': 0xFFFAF0,
+          '脱脂牛奶': 0xF0F8FF
+        },
+        TOPPING: {
+          '珍珠': 0x000000,
+          '椰果': 0xFFFFFF
+        }
+      },
+      // 杯子配置
+      CUP: {
+        TOP_WIDTH: 180,
+        BOTTOM_WIDTH: 120,
+        HEIGHT: 300,
+        TOP_Y: -150,
+        BOTTOM_Y: 150,
+        POSITION_X: 300,
+        POSITION_Y: 400
+      },
+      // 液体配置
+      LIQUID: {
+        TEA_HEIGHT: 120,
+        TEA_CENTER_Y: 90,
+        MILK_HEIGHT: 120,
+        MILK_CENTER_Y: 10,
+        MIXED_HEIGHT: 240,
+        MIXED_CENTER_Y: 30
+      },
+      // 动画配置
+      ANIMATION: {
+        LAYER_DISPLAY_TIME: 2000,
+        MIXING_DURATION: 800,
+        MIXING_DELAY: 2500
+      }
+    }
   }
 
   init(data) {
@@ -9,25 +60,20 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     
     // 玩家选择
     this.playerChoices = {
-      teaBase: null,      // 茶底
-      fruits: [],         // 水果（可多选）
-      topping: null,      // 配料
-      sugar: null,        // 糖度
-      milk: null          // 牛奶类型
+      teaBase: null,
+      fruits: [],
+      topping: null,
+      sugar: null,
+      milk: null
     }
     
-    // 客人订单（如果传入了保留订单标志，则使用传入的订单，否则随机生成）
-    // 严格检查：只有 keepOrder 明确为 true 且有 customerOrder 时才保留订单
+    // 订单管理：失败后保留订单，成功后生成新订单
     if (data && data.keepOrder === true && data.customerOrder) {
-      // 失败后重新制作：保留订单，跳过订单显示
       this.customerOrder = data.customerOrder
       this.skipOrderDisplay = true
-      console.log('保留订单，跳过订单页面', this.customerOrder)
     } else {
-      // 成功后再玩一次 或 首次进入：生成新订单，显示订单页面
       this.customerOrder = this.generateOrder()
       this.skipOrderDisplay = false
-      console.log('生成新订单，显示订单页面', this.customerOrder)
     }
   }
 
@@ -36,8 +82,8 @@ export default class MilkTeaGameScene extends Phaser.Scene {
   }
 
   create() {
-    // 设置背景色（调深一些，让牛奶液体更明显）
-    this.cameras.main.setBackgroundColor('#F5DEB3') // 从米黄色(#FFF8DC)改为小麦色(#F5DEB3)
+    // 设置背景色
+    this.cameras.main.setBackgroundColor(this.CONFIG.COLORS.BACKGROUND)
     
     // 左上角返回按钮
     this.createMenuButton()
@@ -397,40 +443,34 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     this.fruitContainer.setDepth(7)
   }
 
-  // 辅助函数：创建梯形液体（上宽下窄，匹配杯子形状）
+  /**
+   * 创建梯形液体（上宽下窄，匹配杯子形状）
+   * @param {number} yCenter - 液体中心Y坐标
+   * @param {number} height - 液体高度
+   * @param {number} color - 液体颜色（十六进制）
+   * @param {number} alpha - 液体透明度（0-1）
+   * @returns {Phaser.GameObjects.Graphics} 液体图形对象
+   */
   createTrapezoidLiquid(yCenter, height, color, alpha) {
-    console.log('创建梯形液体 - yCenter:', yCenter, 'height:', height, 'color:', color.toString(16), 'alpha:', alpha)
-    
     const graphics = this.add.graphics()
-    
-    // 杯子的梯形参数：顶部宽度180px（-90到90），底部宽度120px（-60到60）
-    // 杯子高度300px（-150到150）
-    const cupTop = -150
-    const cupBottom = 150
-    const cupHeight = 300
-    const topWidth = 180
-    const bottomWidth = 120
+    const { CUP } = this.CONFIG
     
     // 计算液体在杯子中的位置
     const liquidTop = yCenter - height / 2
     const liquidBottom = yCenter + height / 2
     
     // 确保液体不超出杯子范围
-    const clampedTop = Math.max(liquidTop, cupTop)
-    const clampedBottom = Math.min(liquidBottom, cupBottom)
-    
-    console.log('液体范围 - top:', clampedTop, 'bottom:', clampedBottom)
+    const clampedTop = Math.max(liquidTop, CUP.TOP_Y)
+    const clampedBottom = Math.min(liquidBottom, CUP.BOTTOM_Y)
     
     // 根据Y坐标计算对应的宽度（线性插值）
     const getWidthAtY = (y) => {
-      const ratio = (y - cupTop) / cupHeight
-      return topWidth - ratio * (topWidth - bottomWidth)
+      const ratio = (y - CUP.TOP_Y) / CUP.HEIGHT
+      return CUP.TOP_WIDTH - ratio * (CUP.TOP_WIDTH - CUP.BOTTOM_WIDTH)
     }
     
     const topHalfWidth = getWidthAtY(clampedTop) / 2
     const bottomHalfWidth = getWidthAtY(clampedBottom) / 2
-    
-    console.log('液体宽度 - top:', topHalfWidth * 2, 'bottom:', bottomHalfWidth * 2)
     
     // 绘制梯形液体
     graphics.fillStyle(color, alpha)
@@ -441,8 +481,6 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     graphics.lineTo(-bottomHalfWidth, clampedBottom)
     graphics.closePath()
     graphics.fillPath()
-    
-    console.log('液体graphics创建完成，alpha:', graphics.alpha)
     
     return graphics
   }
@@ -754,31 +792,29 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     })
   }
 
+  /**
+   * 添加茶底到杯中
+   * @param {string} teaBase - 茶底类型
+   */
   addTeaBase(teaBase) {
-    const colors = {
-      '红茶': 0x8B4513,
-      '绿茶': 0x90EE90,
-      '乌龙茶': 0xDAA520
-    }
+    const { TEA_BASE } = this.CONFIG.COLORS
+    const { TEA_HEIGHT, TEA_CENTER_Y } = this.CONFIG.LIQUID
     
     // 保存茶底颜色，用于后续混合
-    this.teaBaseColor = colors[teaBase]
-    console.log('添加茶底:', teaBase, '颜色:', this.teaBaseColor.toString(16))
+    this.teaBaseColor = TEA_BASE[teaBase]
     
-    // 使用梯形液体，直接使用最终alpha值（Graphics不支持alpha tween）
-    // 茶底高度120px，中心在y=90（接近杯底）
-    const liquid = this.createTrapezoidLiquid(90, 120, colors[teaBase], 0.7)
+    // 创建茶底液体
+    const liquid = this.createTrapezoidLiquid(TEA_CENTER_Y, TEA_HEIGHT, TEA_BASE[teaBase], 0.7)
     this.liquidContainer.add(liquid)
-    console.log('茶底液体已添加，容器中液体数量:', this.liquidContainer.list.length)
   }
 
+  /**
+   * 添加单个水果到杯中
+   * @param {string} fruit - 水果类型
+   * @returns {Array} 水果切片数组
+   */
   addSingleFruit(fruit) {
-    // 添加单个水果，返回所有切片供后续删除
-    const fruitColors = {
-      '苹果': 0xFF6347,
-      '草莓': 0xFF1493,
-      '葡萄': 0x9370DB
-    }
+    const { FRUIT } = this.CONFIG.COLORS
     
     const pieces = []
     
@@ -799,7 +835,7 @@ export default class MilkTeaGameScene extends Phaser.Scene {
       const x = pos.x + (Math.random() - 0.5) * 10
       const y = pos.y + (Math.random() - 0.5) * 8
       
-      const fruitPiece = this.add.circle(x, y, 10, fruitColors[fruit], 0.95) // 更大更明显
+      const fruitPiece = this.add.circle(x, y, 10, FRUIT[fruit], 0.95)
       this.fruitContainer.add(fruitPiece)
       pieces.push(fruitPiece)
       
@@ -830,21 +866,19 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     return pieces
   }
 
+  /**
+   * 批量添加水果（已废弃，使用 addSingleFruit 代替）
+   */
   addFruits(fruits) {
     if (fruits.length === 0) return
     
-    const fruitColors = {
-      '苹果': 0xFF6347,
-      '草莓': 0xFF1493,
-      '葡萄': 0x9370DB
-    }
+    const { FRUIT } = this.CONFIG.COLORS
     
     fruits.forEach((fruit, index) => {
-      // 创建3-4个水果切片
       for (let i = 0; i < 4; i++) {
         const x = -40 + Math.random() * 80
         const y = 20 + Math.random() * 60
-        const fruitPiece = this.add.circle(x, y, 8, fruitColors[fruit], 0.9)
+        const fruitPiece = this.add.circle(x, y, 8, FRUIT[fruit], 0.9)
         this.fruitContainer.add(fruitPiece)
         
         // 水果落入动画
@@ -862,10 +896,15 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     })
   }
 
+  /**
+   * 添加配料到杯中
+   * @param {string} topping - 配料类型
+   */
   addTopping(topping) {
     if (topping === '不加料') return
     
-    const color = topping === '珍珠' ? 0x000000 : 0xFFFFFF
+    const { TOPPING } = this.CONFIG.COLORS
+    const color = TOPPING[topping]
     
     // 创建配料颗粒
     for (let i = 0; i < 12; i++) {
@@ -893,11 +932,18 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * 添加牛奶并执行混合动画
+   * @param {string} milkType - 牛奶类型
+   */
   addMilkWithMixing(milkType) {
-    // 清除选择UI
     this.clearChoiceUI()
     
-    // 显示加奶提示（使用更深的颜色）
+    const { MILK } = this.CONFIG.COLORS
+    const { MILK_HEIGHT, MILK_CENTER_Y } = this.CONFIG.LIQUID
+    const { LAYER_DISPLAY_TIME, MIXING_DURATION, MIXING_DELAY } = this.CONFIG.ANIMATION
+    
+    // 显示加奶提示
     const milkText = this.add.text(450, 200, `正在加入${milkType}...`, {
       fontSize: '32px',
       fontFamily: 'Arial',
@@ -913,57 +959,54 @@ export default class MilkTeaGameScene extends Phaser.Scene {
       duration: 400
     })
     
-    // 创建牛奶层（根据类型决定颜色和透明度）
-    const milkColor = milkType === '全脂牛奶' ? 0xFFFAF0 : 0xF0F8FF
+    // 创建牛奶层
+    const milkColor = MILK[milkType]
     const milkAlpha = milkType === '全脂牛奶' ? 0.6 : 0.4
     
-    // 保存牛奶颜色和透明度，用于后续混合
     this.milkColor = milkColor
     this.milkAlpha = milkAlpha
     
-    // 使用梯形液体，直接使用最终alpha值（Graphics不支持alpha tween）
-    // 牛奶在茶底上方，中心在y=10，高度120px
-    const milk = this.createTrapezoidLiquid(10, 120, milkColor, milkAlpha)
+    const milk = this.createTrapezoidLiquid(MILK_CENTER_Y, MILK_HEIGHT, milkColor, milkAlpha)
     this.liquidContainer.add(milk)
-    console.log('牛奶层已添加，容器中液体数量:', this.liquidContainer.list.length)
     
-    // 第一阶段：显示分层效果（停留2秒让用户看到分层）
-    this.time.delayedCall(2000, () => {
-      console.log('牛奶倒入完成，开始混合动画')
-      // 第二阶段：混合效果
+    // 阶段1：显示分层效果
+    this.time.delayedCall(LAYER_DISPLAY_TIME, () => {
+      // 阶段2：混合效果
       this.createMixingEffect()
-      
-      // 提示文字变化
       milkText.setText('摇啊摇...')
       
-      // 第三阶段：液面上升到满杯
-      this.time.delayedCall(800, () => {
+      // 阶段3：液面上升到满杯
+      this.time.delayedCall(MIXING_DURATION, () => {
         this.fillCupToFull(milkColor, milkAlpha)
       })
       
-      // 延迟后进入水果步骤
-      this.time.delayedCall(2500, () => {
+      // 进入水果步骤
+      this.time.delayedCall(MIXING_DELAY, () => {
         milkText.destroy()
-        this.startStep5_Fruits() // 最后一步：加水果
+        this.startStep5_Fruits()
       })
     })
   }
   
+  /**
+   * 填满杯子（混合茶底和牛奶）
+   * @param {number} milkColor - 牛奶颜色
+   * @param {number} milkAlpha - 牛奶透明度
+   */
   fillCupToFull(milkColor, milkAlpha) {
-    console.log('开始填满杯子，当前液体数量:', this.liquidContainer.list.length)
-    console.log('茶底颜色:', this.teaBaseColor.toString(16), '牛奶颜色:', milkColor.toString(16))
+    const { MIXED_HEIGHT, MIXED_CENTER_Y } = this.CONFIG.LIQUID
+    const { MIXING_DURATION } = this.CONFIG.ANIMATION
     
-    // 混合茶底和牛奶的颜色（茶底占比更高，颜色更深，ratio=0.4）
+    // 混合茶底和牛奶的颜色（茶底60%，牛奶40%）
     const mixedColor = this.mixColors(this.teaBaseColor, milkColor, 0.4)
-    console.log('混合后颜色:', mixedColor.toString(16))
     
-    // 先让旧液体淡出
-    this.liquidContainer.list.forEach((item, index) => {
+    // 旧液体淡出
+    this.liquidContainer.list.forEach(item => {
       if (item && item.active) {
         this.tweens.add({
           targets: item,
           alpha: 0,
-          duration: 800,
+          duration: MIXING_DURATION,
           ease: 'Sine.easeOut',
           onComplete: () => {
             if (item && item.active) {
@@ -974,19 +1017,21 @@ export default class MilkTeaGameScene extends Phaser.Scene {
       }
     })
     
-    // 延迟后创建新的满杯液体（直接使用最终alpha值，Graphics不支持alpha tween）
-    this.time.delayedCall(800, () => {
-      // 创建混合后的液体（高度240px，留出空间给水果）
-      // 中心在y=30，这样液体从-90到150，顶部留出空间
-      const fullLiquid = this.createTrapezoidLiquid(30, 240, mixedColor, 0.8)
+    // 创建混合后的满杯液体
+    this.time.delayedCall(MIXING_DURATION, () => {
+      const fullLiquid = this.createTrapezoidLiquid(MIXED_CENTER_Y, MIXED_HEIGHT, mixedColor, 0.8)
       this.liquidContainer.add(fullLiquid)
-      console.log('混合液体已创建，alpha:', fullLiquid.alpha, '容器中液体数量:', this.liquidContainer.list.length)
     })
   }
   
-  // 辅助函数：混合两种颜色
+  /**
+   * 混合两种颜色
+   * @param {number} color1 - 第一种颜色（十六进制）
+   * @param {number} color2 - 第二种颜色（十六进制）
+   * @param {number} ratio - 第二种颜色的比例（0-1）
+   * @returns {number} 混合后的颜色（十六进制）
+   */
   mixColors(color1, color2, ratio) {
-    // 将十六进制颜色转换为RGB
     const r1 = (color1 >> 16) & 0xFF
     const g1 = (color1 >> 8) & 0xFF
     const b1 = color1 & 0xFF
@@ -995,20 +1040,20 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     const g2 = (color2 >> 8) & 0xFF
     const b2 = color2 & 0xFF
     
-    // 混合RGB值
     const r = Math.round(r1 * (1 - ratio) + r2 * ratio)
     const g = Math.round(g1 * (1 - ratio) + g2 * ratio)
     const b = Math.round(b1 * (1 - ratio) + b2 * ratio)
     
-    // 转换回十六进制
     return (r << 16) | (g << 8) | b
   }
   
+  /**
+   * 创建混合动画效果（晃动、旋转、粒子）
+   */
   createMixingEffect() {
-    // 创建更多、更明显的混合动画效果
     const mixingParticles = []
     
-    // 增加粒子数量，让效果更明显
+    // 创建混合粒子
     for (let i = 0; i < 20; i++) {
       const particle = this.add.circle(
         0, 
@@ -1092,8 +1137,10 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     })
   }
   
+  /**
+   * 创建闪亮特效（星星和彩色光晕）
+   */
   createSparkleEffect() {
-    // 创建 bling bling 闪亮特效 ✨
     const sparkleCount = 15
     
     for (let i = 0; i < sparkleCount; i++) {
@@ -1150,12 +1197,13 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * 添加牛奶（已废弃，使用 addMilkWithMixing 代替）
+   */
   addMilk() {
-    // 创建牛奶层（白色半透明覆盖层）
     const milk = this.add.rectangle(0, 60, 150, 90, 0xFFFFFF, 0.5)
     this.liquidContainer.add(milk)
     
-    // 牛奶倒入动画
     milk.setAlpha(0)
     this.tweens.add({
       targets: milk,
@@ -1165,8 +1213,10 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     })
   }
 
+  /**
+   * 完成游戏，进入结算页面
+   */
   completeGame() {
-    // 检查是否符合订单
     const isCorrect = this.checkOrder()
     
     this.scene.start('MilkTeaFinishScene', {
@@ -1176,9 +1226,12 @@ export default class MilkTeaGameScene extends Phaser.Scene {
     })
   }
 
+  /**
+   * 检查玩家制作的奶茶是否符合订单
+   * @returns {boolean} 是否完全匹配
+   */
   checkOrder() {
-    const order = this.customerOrder
-    const player = this.playerChoices
+    const { customerOrder: order, playerChoices: player } = this
     
     // 检查每一项是否匹配
     const teaMatch = order.teaBase === player.teaBase
