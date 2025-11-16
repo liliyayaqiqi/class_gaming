@@ -1,6 +1,21 @@
+/**
+ * 时装造型师游戏 - 菜单场景
+ * 展示游戏介绍和开始按钮
+ */
 export default class FashionMenuScene extends Phaser.Scene {
   constructor() {
     super({ key: 'FashionMenuScene' })
+    
+    // 配置常量
+    this.CONFIG = {
+      BACKGROUND_COLOR: '#FFE4E1',
+      TITLE_COLOR: '#FF1493',
+      SUBTITLE_COLOR: '#FF69B4',
+      BUTTON_COLOR: 0xFF1493,
+      BUTTON_HOVER_COLOR: 0xC71585,
+      BACK_BUTTON_COLOR: 0xff9800,
+      BACK_BUTTON_HOVER_COLOR: 0xf57c00
+    }
   }
 
   preload() {
@@ -9,8 +24,8 @@ export default class FashionMenuScene extends Phaser.Scene {
   }
 
   create() {
-    // 设置背景色（优雅的粉色）
-    this.cameras.main.setBackgroundColor('#FFE4E1')
+    // 设置背景色
+    this.cameras.main.setBackgroundColor(this.CONFIG.BACKGROUND_COLOR)
     
     // 获取游戏尺寸
     const { width, height } = this.cameras.main
@@ -24,7 +39,7 @@ export default class FashionMenuScene extends Phaser.Scene {
     const title = this.add.text(centerX, 120, '👗 我是时装造型师', {
       fontSize: '48px',
       fontFamily: 'Arial',
-      color: '#FF1493',
+      color: this.CONFIG.TITLE_COLOR,
       fontStyle: 'bold',
       stroke: '#ffffff',
       strokeThickness: 6
@@ -34,7 +49,7 @@ export default class FashionMenuScene extends Phaser.Scene {
     const subtitle = this.add.text(centerX, 190, '💇 发型 → 👗 连衣裙 → 👠 高跟鞋 → 👜 包包', {
       fontSize: '24px',
       fontFamily: 'Arial',
-      color: '#FF69B4',
+      color: this.CONFIG.SUBTITLE_COLOR,
       fontStyle: 'bold'
     }).setOrigin(0.5)
     
@@ -42,7 +57,7 @@ export default class FashionMenuScene extends Phaser.Scene {
     this.createModelPreview(centerX, centerY + 50)
     
     // 开始游戏按钮
-    const startButton = this.add.rectangle(centerX, height - 80, 200, 60, 0xFF1493)
+    const startButton = this.add.rectangle(centerX, height - 80, 200, 60, this.CONFIG.BUTTON_COLOR)
       .setInteractive({ useHandCursor: true })
     
     const startText = this.add.text(centerX, height - 80, '开始游戏', {
@@ -58,13 +73,13 @@ export default class FashionMenuScene extends Phaser.Scene {
     })
     
     startButton.on('pointerover', () => {
-      startButton.setFillStyle(0xC71585)
+      startButton.setFillStyle(this.CONFIG.BUTTON_HOVER_COLOR)
       startButton.setScale(1.05)
       startText.setScale(1.05)
     })
     
     startButton.on('pointerout', () => {
-      startButton.setFillStyle(0xFF1493)
+      startButton.setFillStyle(this.CONFIG.BUTTON_COLOR)
       startButton.setScale(1)
       startText.setScale(1)
     })
@@ -80,8 +95,11 @@ export default class FashionMenuScene extends Phaser.Scene {
     })
   }
 
+  /**
+   * 创建返回主菜单按钮
+   */
   createBackButton() {
-    const backButton = this.add.rectangle(80, 30, 140, 40, 0xff9800)
+    const backButton = this.add.rectangle(80, 30, 140, 40, this.CONFIG.BACK_BUTTON_COLOR)
       .setInteractive({ useHandCursor: true })
     
     const backText = this.add.text(80, 30, '返回主菜单', {
@@ -96,14 +114,20 @@ export default class FashionMenuScene extends Phaser.Scene {
     })
     
     backButton.on('pointerover', () => {
-      backButton.setFillStyle(0xf57c00)
+      backButton.setFillStyle(this.CONFIG.BACK_BUTTON_HOVER_COLOR)
     })
     
     backButton.on('pointerout', () => {
-      backButton.setFillStyle(0xff9800)
+      backButton.setFillStyle(this.CONFIG.BACK_BUTTON_COLOR)
     })
   }
 
+  /**
+   * 创建模特预览图
+   * @param {number} x - X坐标
+   * @param {number} y - Y坐标
+   * @returns {Phaser.GameObjects.Image} 模特图像对象
+   */
   createModelPreview(x, y) {
     // 使用真实的模特图片
     const model = this.add.image(x, y, 'barbie')

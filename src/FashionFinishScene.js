@@ -1,3 +1,7 @@
+/**
+ * 时装造型师游戏 - 完成场景
+ * 展示最终造型效果和奖励
+ */
 export default class FashionFinishScene extends Phaser.Scene {
   constructor() {
     super({ key: 'FashionFinishScene' })
@@ -24,6 +28,10 @@ export default class FashionFinishScene extends Phaser.Scene {
     this.load.image('bag03', 'fashion/bag03.png')
   }
 
+  /**
+   * 初始化场景数据
+   * @param {Object} data - 从游戏场景传递的数据
+   */
   init(data) {
     this.playerChoices = data.playerChoices || {
       hair: 0,
@@ -40,15 +48,30 @@ export default class FashionFinishScene extends Phaser.Scene {
       bag: { x: 65, y: -20 }
     }
     
-    // 配置（与GameScene保持一致）
+    // 配置常量（与GameScene保持一致）
     this.CONFIG = {
       COLORS: {
         BACKGROUND: '#FFE4E1',
+        TITLE: '#FF1493',
+        ACHIEVEMENT: '#FF69B4',
+        BUTTON: 0xFF1493,
+        BUTTON_HOVER: 0xC71585,
+        BACK_BUTTON: 0xff9800,
+        BACK_BUTTON_HOVER: 0xf57c00,
         SKIN: 0xFFDEAD,
         HAIR: [0x8B4513, 0xFFD700, 0x000000],
         DRESS: [0xFF69B4, 0x87CEEB, 0x98FB98],
         SHOES: [0xFF1493, 0x000000, 0xFFFFFF],
         BAG: [0xFF69B4, 0x8B4513, 0xFFD700]
+      },
+      ASSETS: {
+        HAIR: ['hair01', 'hair02', 'hair03'],
+        DRESS: ['dress01', 'dress02', 'dress03'],
+        SHOES: ['shoe01', 'shoe02', 'shoe03'],
+        BAG: ['bag01', 'bag02', 'bag03']
+      },
+      SCALES: {
+        MODEL: 0.9
       }
     }
   }
@@ -140,9 +163,9 @@ export default class FashionFinishScene extends Phaser.Scene {
     const container = this.add.container(x, y)
     container.setDepth(10)
     
-    // 使用真实的模特基础图，放大到0.8倍
+    // 使用真实的模特基础图
     const baseModel = this.add.image(0, 0, 'base_model')
-    baseModel.setScale(0.9) // 放大模特，占满画幅中间
+    baseModel.setScale(this.CONFIG.SCALES.MODEL)
     container.add(baseModel)
     
     // 应用玩家选择的发型
@@ -170,54 +193,54 @@ export default class FashionFinishScene extends Phaser.Scene {
     return container
   }
 
+  /**
+   * 应用发型到模特容器
+   * @param {Phaser.GameObjects.Container} container - 模特容器
+   * @param {number} index - 发型索引
+   */
   applyHair(container, index) {
-    // 使用保存的位置
     const pos = this.decorationPositions.hair
-    
-    // 全部使用图片发型
-    const hairImages = ['hair01', 'hair02', 'hair03']
-    const hair = this.add.image(0, 0, hairImages[index])
-    hair.setScale(1.0) // 完成场景的尺寸
-    
+    const hair = this.add.image(0, 0, this.CONFIG.ASSETS.HAIR[index])
+    hair.setScale(1.0)
     hair.setPosition(pos.x, pos.y)
     container.add(hair)
   }
 
+  /**
+   * 应用连衣裙到模特容器
+   * @param {Phaser.GameObjects.Container} container - 模特容器
+   * @param {number} index - 连衣裙索引
+   */
   applyDress(container, index) {
-    // 使用保存的位置
     const pos = this.decorationPositions.dress
-    
-    // 全部使用图片
-    const dressImages = ['dress01', 'dress02', 'dress03']
-    const dress = this.add.image(0, 0, dressImages[index])
-    dress.setScale(1.0) // 完成场景的尺寸
-    
+    const dress = this.add.image(0, 0, this.CONFIG.ASSETS.DRESS[index])
+    dress.setScale(1.0)
     dress.setPosition(pos.x, pos.y)
     container.add(dress)
   }
 
+  /**
+   * 应用鞋子到模特容器
+   * @param {Phaser.GameObjects.Container} container - 模特容器
+   * @param {number} index - 鞋子索引
+   */
   applyShoes(container, index) {
-    // 使用保存的位置
     const pos = this.decorationPositions.shoes
-    
-    // 全部使用图片
-    const shoeImages = ['shoe01', 'shoe02', 'shoe03']
-    const shoes = this.add.image(0, 0, shoeImages[index])
-    shoes.setScale(1.0) // 完成场景的尺寸
-    
+    const shoes = this.add.image(0, 0, this.CONFIG.ASSETS.SHOES[index])
+    shoes.setScale(1.0)
     shoes.setPosition(pos.x, pos.y)
     container.add(shoes)
   }
 
+  /**
+   * 应用包包到模特容器
+   * @param {Phaser.GameObjects.Container} container - 模特容器
+   * @param {number} index - 包包索引
+   */
   applyBag(container, index) {
-    // 使用保存的位置
     const pos = this.decorationPositions.bag
-    
-    // 全部使用图片
-    const bagImages = ['bag01', 'bag02', 'bag03']
-    const bag = this.add.image(0, 0, bagImages[index])
-    bag.setScale(1.0) // 完成场景的尺寸
-    
+    const bag = this.add.image(0, 0, this.CONFIG.ASSETS.BAG[index])
+    bag.setScale(1.0)
     bag.setPosition(pos.x, pos.y)
     container.add(bag)
   }

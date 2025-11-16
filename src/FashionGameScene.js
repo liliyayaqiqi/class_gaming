@@ -1,27 +1,62 @@
+/**
+ * 时装造型师游戏 - 主游戏场景
+ * 玩家依次选择发型、连衣裙、高跟鞋、包包，通过拖拽调整位置
+ */
 export default class FashionGameScene extends Phaser.Scene {
   constructor() {
     super({ key: 'FashionGameScene' })
     
-    // 游戏配置
+    // 游戏配置常量
     this.CONFIG = {
+      // 游戏步骤名称
       STEPS: ['发型', '连衣裙', '高跟鞋', '包包'],
+      
+      // 颜色配置
       COLORS: {
         BACKGROUND: '#FFE4E1',
+        TITLE: '#FF1493',
+        HINT: '#FF69B4',
+        BUTTON: 0xFF1493,
+        BUTTON_HOVER: 0xC71585,
+        BACK_BUTTON: 0xff9800,
+        BACK_BUTTON_HOVER: 0xf57c00,
         SKIN: 0xFFDEAD,
-        // 发型颜色
         HAIR: [0x8B4513, 0xFFD700, 0x000000],
-        // 连衣裙颜色
         DRESS: [0xFF69B4, 0x87CEEB, 0x98FB98],
-        // 鞋子颜色
         SHOES: [0xFF1493, 0x000000, 0xFFFFFF],
-        // 包包颜色
         BAG: [0xFF69B4, 0x8B4513, 0xFFD700]
+      },
+      
+      // 资源键名
+      ASSETS: {
+        HAIR: ['hair01', 'hair02', 'hair03'],
+        DRESS: ['dress01', 'dress02', 'dress03'],
+        SHOES: ['shoe01', 'shoe02', 'shoe03'],
+        BAG: ['bag01', 'bag02', 'bag03']
+      },
+      
+      // 选项文字描述
+      LABELS: {
+        HAIR: ['双马尾', '精灵短发', '长卷发'],
+        DRESS: ['蛋糕裙', '碎花裙', '孔雀裙'],
+        SHOES: ['蝴蝶结', '简约款', '系带款'],
+        BAG: ['简约款', '爱心款', '星星款']
+      },
+      
+      // 缩放比例
+      SCALES: {
+        PREVIEW: 0.5,  // 预览缩略图
+        DRAGGABLE: 1.0, // 拖拽和锁定
+        MODEL: 0.9      // 模特
       }
     }
   }
 
+  /**
+   * 初始化游戏状态
+   */
   init() {
-    // 玩家选择
+    // 玩家选择记录
     this.playerChoices = {
       hair: null,
       dress: null,
@@ -29,15 +64,15 @@ export default class FashionGameScene extends Phaser.Scene {
       bag: null
     }
     
-    // 保存装饰物的位置（相对于模特容器的本地坐标）
+    // 装饰物位置（相对于模特容器的本地坐标）
     this.decorationPositions = {
-      hair: { x: 0, y: -70 },    // 默认位置
+      hair: { x: 0, y: -70 },
       dress: { x: 0, y: 0 },
       shoes: { x: 0, y: 95 },
       bag: { x: 65, y: -20 }
     }
     
-    // 当前步骤（0=发型, 1=连衣裙, 2=高跟鞋, 3=包包）
+    // 当前步骤索引（0=发型, 1=连衣裙, 2=高跟鞋, 3=包包）
     this.currentStep = 0
     
     // 模特图层引用
@@ -48,6 +83,10 @@ export default class FashionGameScene extends Phaser.Scene {
       shoes: null,
       bag: null
     }
+    
+    // 当前可拖拽物品引用
+    this.currentDraggableItem = null
+    this.currentDraggableData = null
   }
 
   preload() {
@@ -99,8 +138,11 @@ export default class FashionGameScene extends Phaser.Scene {
     this.startStep(0)
   }
 
+  /**
+   * 创建返回主菜单按钮
+   */
   createBackButton() {
-    const backButton = this.add.rectangle(80, 30, 140, 40, 0xff9800)
+    const backButton = this.add.rectangle(80, 30, 140, 40, this.CONFIG.COLORS.BACK_BUTTON)
       .setInteractive({ useHandCursor: true })
       .setDepth(2000)
     
@@ -116,26 +158,35 @@ export default class FashionGameScene extends Phaser.Scene {
     })
     
     backButton.on('pointerover', () => {
-      backButton.setFillStyle(0xf57c00)
+      backButton.setFillStyle(this.CONFIG.COLORS.BACK_BUTTON_HOVER)
     })
     
     backButton.on('pointerout', () => {
-      backButton.setFillStyle(0xff9800)
+      backButton.setFillStyle(this.CONFIG.COLORS.BACK_BUTTON)
     })
   }
 
+  /**
+   * 创建模特基础图
+   * @param {number} x - X坐标
+   * @param {number} y - Y坐标
+   */
   createModel(x, y) {
     // 创建模特容器
     this.modelContainer = this.add.container(x, y)
     this.modelContainer.setDepth(10)
     
-    // 使用真实的模特基础图，放大到0.8倍
+    // 使用真实的模特基础图
     const baseModel = this.add.image(0, 0, 'base_model')
-    baseModel.setScale(0.9) // 放大模特，占满画幅中间
+    baseModel.setScale(this.CONFIG.SCALES.MODEL)
     this.modelLayers.base = baseModel
     this.modelContainer.add(baseModel)
   }
 
+  /**
+   * 开始指定步骤
+   * @param {number} stepIndex - 步骤索引（0-3）
+   */
   startStep(stepIndex) {
     this.currentStep = stepIndex
     
@@ -164,32 +215,35 @@ export default class FashionGameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * 显示发型选择
+   */
   showHairChoices() {
     const hint = this.add.text(this.centerX, this.centerY + 300, '拖动发型到合适的位置，然后点击确定', {
       fontSize: '20px',
       fontFamily: 'Arial',
-      color: '#FF69B4',
+      color: this.CONFIG.COLORS.HINT,
       fontStyle: 'italic'
     }).setOrigin(0.5).setDepth(100)
     
-    const hairStyles = ['双马尾', '精灵短发', '长卷发']
-    const colors = this.CONFIG.COLORS.HAIR
-    
-    this.createDraggableChoices(150, 200, hairStyles, colors, (choice, index) => {
+    this.createDraggableChoices(150, 200, this.CONFIG.LABELS.HAIR, this.CONFIG.COLORS.HAIR, (choice, index) => {
       this.playerChoices.hair = index
       this.createDraggableHair(index)
     })
   }
 
+  /**
+   * 显示连衣裙选择
+   */
   showDressChoices() {
     const hint = this.add.text(this.centerX, this.centerY + 300, '拖动连衣裙到合适的位置，然后点击确定', {
       fontSize: '20px',
       fontFamily: 'Arial',
-      color: '#FF69B4',
+      color: this.CONFIG.COLORS.HINT,
       fontStyle: 'italic'
     }).setOrigin(0.5).setDepth(100)
     
-    const dressStyles = ['蛋糕裙', '碎花裙', '孔雀裙']
+    const dressStyles = this.CONFIG.LABELS.DRESS
     const colors = this.CONFIG.COLORS.DRESS
     
     this.createDraggableChoices(150, 200, dressStyles, colors, (choice, index) => {
@@ -198,40 +252,48 @@ export default class FashionGameScene extends Phaser.Scene {
     })
   }
 
+  /**
+   * 显示鞋子选择
+   */
   showShoesChoices() {
     const hint = this.add.text(this.centerX, this.centerY + 300, '拖动鞋子到合适的位置，然后点击确定', {
       fontSize: '20px',
       fontFamily: 'Arial',
-      color: '#FF69B4',
+      color: this.CONFIG.COLORS.HINT,
       fontStyle: 'italic'
     }).setOrigin(0.5).setDepth(100)
     
-    const shoesStyles = ['蝴蝶结', '简约款', '系带款']
-    const colors = this.CONFIG.COLORS.SHOES
-    
-    this.createDraggableChoices(150, 200, shoesStyles, colors, (choice, index) => {
+    this.createDraggableChoices(150, 200, this.CONFIG.LABELS.SHOES, this.CONFIG.COLORS.SHOES, (choice, index) => {
       this.playerChoices.shoes = index
       this.createDraggableShoes(index)
     })
   }
 
+  /**
+   * 显示包包选择
+   */
   showBagChoices() {
     const hint = this.add.text(this.centerX, this.centerY + 300, '拖动包包到合适的位置，然后点击确定', {
       fontSize: '20px',
       fontFamily: 'Arial',
-      color: '#FF69B4',
+      color: this.CONFIG.COLORS.HINT,
       fontStyle: 'italic'
     }).setOrigin(0.5).setDepth(100)
     
-    const bagStyles = ['简约款', '爱心款', '星星款']
-    const colors = this.CONFIG.COLORS.BAG
-    
-    this.createDraggableChoices(150, 200, bagStyles, colors, (choice, index) => {
+    this.createDraggableChoices(150, 200, this.CONFIG.LABELS.BAG, this.CONFIG.COLORS.BAG, (choice, index) => {
       this.playerChoices.bag = index
       this.createDraggableBag(index)
     })
   }
 
+  /**
+   * 创建可拖拽的选项按钮
+   * @param {number} x - X坐标
+   * @param {number} startY - 起始Y坐标
+   * @param {string[]} labels - 选项标签数组
+   * @param {number[]} colors - 颜色数组
+   * @param {Function} callback - 点击回调函数
+   */
   createDraggableChoices(x, startY, labels, colors, callback) {
     // 创建可点击的选项按钮（点击后创建可拖拽的装饰物）
     labels.forEach((label, index) => {
@@ -358,29 +420,26 @@ export default class FashionGameScene extends Phaser.Scene {
     })
   }
 
+  /**
+   * 创建预览图标
+   * @param {number} step - 步骤索引（0=发型, 1=连衣裙, 2=鞋子, 3=包包）
+   * @param {number} index - 选项索引
+   * @param {number} color - 颜色（未使用，保留用于兼容性）
+   * @returns {Phaser.GameObjects.Image} 预览图标对象
+   */
   createPreviewIcon(step, index, color) {
-    switch(step) {
-      case 0: // 发型 - 全部使用图片
-        const hairImages = ['hair01', 'hair02', 'hair03']
-        const hairImage = this.add.image(0, 0, hairImages[index])
-        hairImage.setScale(0.5) // 缩略图尺寸
-        return hairImage
-      case 1: // 连衣裙 - 全部使用图片
-        const dressImages = ['dress01', 'dress02', 'dress03']
-        const dressImage = this.add.image(0, 0, dressImages[index])
-        dressImage.setScale(0.25) // 缩略图尺寸
-        return dressImage
-      case 2: // 鞋子 - 全部使用图片
-        const shoeImages = ['shoe01', 'shoe02', 'shoe03']
-        const shoeImage = this.add.image(0, 0, shoeImages[index])
-        shoeImage.setScale(0.5) // 缩略图尺寸
-        return shoeImage
-      case 3: // 包包 - 全部使用图片
-        const bagImages = ['bag01', 'bag02', 'bag03']
-        const bagImage = this.add.image(0, 0, bagImages[index])
-        bagImage.setScale(0.5) // 缩略图尺寸
-        return bagImage
-    }
+    const assetKeys = [
+      this.CONFIG.ASSETS.HAIR,
+      this.CONFIG.ASSETS.DRESS,
+      this.CONFIG.ASSETS.SHOES,
+      this.CONFIG.ASSETS.BAG
+    ]
+    
+    const scales = [0.5, 0.25, 0.5, 0.5] // 各类型的缩略图缩放比例
+    
+    const image = this.add.image(0, 0, assetKeys[step][index])
+    image.setScale(scales[step])
+    return image
   }
 
   createDraggableHair(index) {
